@@ -14,6 +14,12 @@
 
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+   Add GyverButton function
+   1 tap - on/off
+   2 tap - change mode down
+   3 tap - change mode up
+   4 tap - autochange on/off
 */
 
 //#define FASTLED_ALLOW_INTERRUPTS 1
@@ -52,13 +58,18 @@ ESP8266HTTPUpdateServer httpUpdateServer;
 
 #include "FSBrowser.h"
 
-#define DATA_PIN      D5
-#define LED_TYPE      WS2811
-#define COLOR_ORDER   RGB
-#define NUM_LEDS      200
-
-#define MILLI_AMPS         2000 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
+// Your settings
+#define DATA_PIN      D5      // Led pin, need PWN pin
+#define LED_TYPE      WS2811  // type led
+#define COLOR_ORDER   GRB     // Change if wrong color
+#define NUM_LEDS      10      // Leds number in one strip
+#define BTN_PIN       D6      // Pin for button
+#define NUM_STRIPS    4       // Led strips in paralel
+#define MILLI_AMPS         2500 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
 #define FRAMES_PER_SECOND  120  // here you can control the speed. With the Access Point / Web Server the animations run a bit slower.
+
+#include "GyverButton.h"
+GButton touch(BTN_PIN, HIGH_PULL, NORM_OPEN);   // Button + GND - HIGH_PUL, Touch - LOW_PULL
 
 const bool apMode = false;
 
@@ -67,11 +78,9 @@ const bool apMode = false;
 
 // AP mode password
 // const char WiFiAPPSK[] = "your-password";
-
 // Wi-Fi network to connect to (if not in AP mode)
 // char* ssid = "your-ssid";
 // char* password = "your-password";
-
 
 CRGB leds[NUM_LEDS];
 
@@ -141,6 +150,7 @@ typedef PatternAndName PatternAndNameList[];
 #include "TwinkleFOX.h"
 
 // List of patterns to cycle through.  Each is defined as a separate function below.
+// todo Beat and Sinelon isn't work
 
 PatternAndNameList patterns = {
   { pride,                  "Pride" },
@@ -227,7 +237,7 @@ void setup() {
   FastLED.setDither(false);
   FastLED.setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(brightness);
-  FastLED.setMaxPowerInVoltsAndMilliamps(5, MILLI_AMPS);
+  FastLED.setMaxPowerInVoltsAndMilliamps(5, MILLI_AMPS / NUM_STRIPS);
   fill_solid(leds, NUM_LEDS, CRGB::Black);
   FastLED.show();
 
@@ -472,6 +482,7 @@ void loop() {
   webServer.handleClient();
 
   //  handleIrInput();
+    handleBtn();    // If you have button
 
   if (power == 0) {
     fill_solid(leds, NUM_LEDS, CRGB::Black);
@@ -560,6 +571,26 @@ void loop() {
 //      break;
 //  }
 //}
+
+void handleBtn(){
+  touch.tick();
+  if (touch.hasClicks()) {
+    byte clicks = touch.getClicks();
+    switch (clicks) {
+      case 1:
+        setPower(power == 0 ? 1 : 0);
+        break;
+      case 2: adjustPattern(true);
+        break;
+      case 3: adjustPattern(false);
+        break;
+      case 4: setAutoplay(!autoplay);
+        break;
+      case 5:
+        break;
+    }
+  }
+}
 
 //void handleIrInput()
 //{
